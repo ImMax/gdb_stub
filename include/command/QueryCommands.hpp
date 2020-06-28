@@ -13,17 +13,12 @@ class GetSupportedFeatures : public Command {
 public:
     std::string getName() const override { return "qSupported"; }
     Result exec(Target &target, const std::string &args) override {
-        target.cpu.stop();
-        const auto NOT_SUPPORTED = "-";
-        const auto SUPPORTED = "+";
-        auto isSupported = [&SUPPORTED, &NOT_SUPPORTED](bool property) {
-            return property ? SUPPORTED : NOT_SUPPORTED;
-        };
         std::stringstream ss;
-        ss << "PacketSize=" << str::intToHex(target.state.packetSize) << ";"
-           << "vContSupported" << NOT_SUPPORTED << ";"
-           << "swbreak" << SUPPORTED << ";"
-           << "multiprocess" << isSupported(target.state.multiprocess);
+        ss << "PacketSize=" << target.config["PacketSize"] << ";"
+           << "vContSupported" << target.config["vContSupported"] << ";"
+           << "swbreak" << target.config["swbreak"] << ";"
+           << "multiprocess" << target.config["multiprocess"];
+
         return {ss.str()};
     }
 };
@@ -65,7 +60,7 @@ public:
 class GetTraceStatus : public Command {
 public:
     std::string getName() const override { return "qTStatus"; }
-    Result exec(Target &target, const std::string &args) override { return {"T0"}; }
+    Result exec(Target &target, const std::string &args) override { return {""}; }
 };
 
 class IsAttachedToExistingProcess : public Command {

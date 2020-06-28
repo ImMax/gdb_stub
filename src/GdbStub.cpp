@@ -7,25 +7,40 @@
 
 namespace gdb_stub {
 
-Stub::Stub(Target &target, std::vector<std::shared_ptr<cmd::Command>> commands,
+std::map<uint8_t, Signal> Stub::signalMap = {
+        { 0x02, Signal::INT },
+        { 0x03, Signal::INT },
+};
+
+Stub::Stub(Target &target, std::vector<cmd::Command_ptr> commands,
            std::istream &inputStream, std::ostream &outputStream) :
-        commandTable(target, std::move(commands)), in(inputStream), out(outputStream) {}
+        target(target), commandTable(std::move(commands)), in(inputStream), out(outputStream) {}
 
 void Stub::response(const Packet &request) {
-    if (request.checksum == calculateChecksum(request.data)) {
-        std::vector<std::string> commands = str::split(request.data, ';');
-
-        std::vector<std::string> results{};
-        for (auto &command : commands) {
-            auto result = commandTable.exec(command);
-            if (!result.empty())
-                results.push_back(result);
-        }
-
-        auto payload = boost::algorithm::join(results, ";");
+    if (isSignal(request)) {
+        const auto payload = commandTable.exec(target, request.data).val;
         out << ackOk() << Packet(payload, calculateChecksum(payload)).toStr();
-    } else {
-        out << ackFail();
+    } else  {
+        if (request.isValid()) {
+            std::vector<std::string> commands = str::split(request.data, ';');
+
+            std::vector<std::string> results{};
+            for (auto &command : commands) {
+                const auto result = commandTable.exec(target, command);
+
+                if (result.status == cmd::Status::CONTINUE) {
+                    return;
+                }
+
+                if (result.status != cmd::Status::EMPTY)
+                    results.push_back(result.val);
+            }
+
+            auto payload = boost::algorithm::join(results, ";");
+            out << ackOk() << Packet(payload, calculateChecksum(payload)).toStr();
+        } else {
+            out << ackFail();
+        }
     }
 }
 
@@ -39,34 +54,57 @@ uint8_t Stub::readChecksum() {
     return str::hexToInt<uint8_t>(buffer.str());
 }
 
-Packet Stub::request() {
-    std::stringstream buffer;
-    uint8_t checksum = 0;
-    bool isReading = false;
-    bool isPacketReceived = false;
-    while(!isPacketReceived) {
-        char gdbChar;
-        in >> gdbChar;
-        switch(gdbChar) {
-            case '$': {
-                isReading = true;
-            } break;
-            case '#': {
-                checksum = readChecksum();
-                isReading = false;
-                isPacketReceived = true;
-            } break;
-            default: {
-                if (isReading) {
-                    buffer << gdbChar;
-                }
-            } break;
-        }
-    }
-    return Packet(buffer.str(), checksum);
+bool Stub::isPacketStart(char data) {
+    return data == '$';
 }
 
-bool Stub::isDead() { return commandTable.isKillPacketReceived(); }
+bool Stub::isPacketEnd(char data) {
+    return data == '#';
+}
+
+bool Stub::isSignal(char data) {
+    return data == 0x02;
+}
+
+bool Stub::isSignal(const Packet &packet) {
+    return packet == INTERRUPT_PACKET;
+}
+
+Packet Stub::readPacket() {
+    std::stringstream buffer;
+    while(true) {
+        char data;
+        in >> data;
+        if (isPacketEnd(data)) {
+            const uint8_t checksum = readChecksum();
+            return Packet(buffer.str(), checksum);
+        } else {
+            buffer << data;
+        }
+    }
+}
+
+Packet Stub::signalToPacket(Signal sig) {
+    switch (sig) {
+        case Signal::INT: return INTERRUPT_PACKET;
+        default: return EMPTY_PACKET;
+    }
+}
+
+Packet Stub::request() {
+    while (true) {
+        char data;
+        in >> data;
+        if (isPacketStart(data)) {
+            return readPacket();
+        }
+        if (isSignal(data)) {
+            return signalToPacket(signalMap[data]);
+        }
+    }
+}
+
+bool Stub::isDead() { return target.status == TargetStatus::KILLED; }
 
 Checksum calculateChecksum(const PacketData &str) {
     return static_cast<uint32_t>(std::accumulate(std::begin(str), std::end(str), 0)) % 256;

@@ -12,7 +12,7 @@ class KillProcess : public Command {
 public:
     std::string getName() const override { return "vKill"; }
     Result exec(Target &target, const std::string &args) override {
-        target.state.isKilled = true;
+        target.status = TargetStatus::KILLED;
         return {"OK"};
     }
 };

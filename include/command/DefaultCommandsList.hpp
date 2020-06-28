@@ -9,7 +9,7 @@
 
 namespace gdb_stub {
 
-std::vector<std::shared_ptr<cmd::Command>> DEFAULT_COMMANDS_LIST {
+std::vector<cmd::Command_ptr> DEFAULT_COMMANDS_LIST {
         std::make_shared<cmd::GetHaltReason>(),
         std::make_shared<cmd::ReadGeneralRegisters>(),
         std::make_shared<cmd::Continue>(),
@@ -29,6 +29,7 @@ std::vector<std::shared_ptr<cmd::Command>> DEFAULT_COMMANDS_LIST {
         std::make_shared<cmd::StartNoAckMode>(),
 
         std::make_shared<cmd::KillProcess>(),
+        std::make_shared<cmd::Interrupt>(),
 };
 
 }

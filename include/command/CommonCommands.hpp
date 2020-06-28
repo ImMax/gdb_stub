@@ -12,14 +12,17 @@ namespace cmd {
 class GetHaltReason : public Command {
 public:
     std::string getName() const override { return "?"; }
-    Result exec(Target &target, const std::string &args) override { return {"S05"}; }
+    Result exec(Target &target, const std::string &args) override {
+        target.cpu.stopIfNot();
+        return {"S02"};
+    }
 };
 
 class ReadGeneralRegisters : public Command {
 public:
     std::string getName() const override { return "g"; }
     Result exec(Target &target, const std::string &args) override {
-        auto registers = target.memory.readGPR();
+        auto registers = target.cpu.readGPR();
         if (registers.empty()) return {E01, Status::FAILED};
         std::ostringstream registersHex;
         for (const auto& r : registers) {
@@ -34,7 +37,8 @@ public:
     std::string getName() const override { return "c"; }
     Result exec(Target &target, const std::string &args) override {
         target.cpu.start();
-        return {"S00"};
+        target.status = TargetStatus::RUNNING;
+        return EMPTY_RESULT;
     }
 };
 
@@ -78,7 +82,7 @@ public:
     std::string getName() const override { return "Z"; }
     Result exec(Target &target, const std::string &args) override {
         const auto bpCmd = BreakpointCmd(args);
-        target.memory.setBreakpoint(bpCmd.address);
+        target.cpu.setBreakpoint(bpCmd.address);
         return {"OK"};
     }
 };
@@ -87,7 +91,7 @@ class RemoveBreakpoint : public Command {
 public:
     std::string getName() const override { return "z"; }
     Result exec(Target &target, const std::string &args) override {
-        target.memory.removeAllBreakpoints();
+        target.cpu.removeAllBreakpoints();
         return {"OK"};
     }
 };
@@ -108,7 +112,23 @@ public:
 class SetTreadForNextCmd : public Command {
 public:
     std::string getName() const override { return "H"; }
-    Result exec(Target &target, const std::string &args) override { return {E01, Status::FAILED}; }
+    Result exec(Target &target, const std::string &args) override {
+        const auto op = args[1];
+        const auto threadId = args[2];
+        if (threadId == '-')
+            return {"OK"};
+        else
+            return {E01, Status::FAILED};
+    }
+};
+
+class Interrupt : public Command {
+public:
+    std::string getName() const override { return cmd::INTERRUPT_NAME; }
+    Result exec(Target &target, const std::string &args) override {
+        target.cpu.stop();
+        return {"S02"};
+    }
 };
 
 }

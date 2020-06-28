@@ -8,11 +8,16 @@ namespace gdb_stub {
 
 namespace cmd {
 
+constexpr auto INTERRUPT_NAME = "int";
+constexpr auto INTERRUPT_BYTE = 0x03;
+
 constexpr auto E01 = "E01";
 
 enum class Status {
     SUCCESS,
-    FAILED
+    FAILED,
+    EMPTY,
+    CONTINUE,
 };
 
 struct Result {
@@ -21,12 +26,17 @@ struct Result {
     Status status;
 };
 
+const auto EMPTY_RESULT = Result("", Status::EMPTY);
+const auto CONTINUE_RESULT = Result("", Status::CONTINUE);
+
 class Command {
 public:
     virtual std::string getName() const = 0;
     virtual Result exec(Target &target, const std::string &args) = 0;
     virtual ~Command() = default;
 };
+
+using Command_ptr = std::shared_ptr<Command>;
 
 }
 

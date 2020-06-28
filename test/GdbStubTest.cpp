@@ -17,11 +17,10 @@ public:
     std::stringstream in;
     std::stringstream out;
 
-    const std::string TEST_LPAR_NAME = "LPAR_TEST";
+    const std::string TEST_NAME = "TEST";
 
     Target dummyTarget {
-            Target::Config{{"lpar", TEST_LPAR_NAME}},
-            State{0xfff, true, false},
+            Target::Config{{"test", TEST_NAME}},
             memMock,
             cpuMock
     };
@@ -85,6 +84,36 @@ TEST_F(GdbStubTest, TestStringUtils) {
     EXPECT_EQ(0xBE, str::hexToInt<uint8_t>("be"));
 
     EXPECT_EQ("0fff", str::intToHex<uint16_t>(0xfff));
+}
+
+TEST_F(GdbStubTest, Test_Break) {
+    EXPECT_CALL(cpuMock, stop());
+
+    in << (char)(0x02);
+
+    auto packet = stub.request();
+    stub.response(packet);
+
+    std::string output;
+    out >> output;
+
+    EXPECT_EQ(output, "+$S02#b5");
+}
+
+TEST_F(GdbStubTest, Test_break_while_stopped) {
+    EXPECT_CALL(cpuMock, stop());
+
+    dummyTarget.status = TargetStatus::STOPPED;
+
+    in << (char)(0x02);
+
+    auto packet = stub.request();
+    stub.response(packet);
+
+    std::string output;
+    out >> output;
+
+    EXPECT_EQ(output, "+$S02#b5");
 }
 
 }

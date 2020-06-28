@@ -18,8 +18,7 @@ using namespace boost::adaptors;
 
 class CommandTable {
 public:
-    CommandTable(Target &target, std::vector<std::shared_ptr<cmd::Command>> commands) :
-            target(target) {
+    CommandTable(std::vector<cmd::Command_ptr> commands) {
         for (const auto &c : commands) {
             commandTable.insert({c->getName(), c});
         }
@@ -31,14 +30,14 @@ public:
         boost::sort(oneLetterNames);
     }
 
-    std::string exec(const std::string &cmd) {
+    cmd::Result exec(Target &target, const std::string &cmd) {
         auto cmdName = getCmdName(cmd);
 
         try {
-            return commandTable.at(cmdName)->exec(target, {cmd}).val;
+            return commandTable.at(cmdName)->exec(target, {cmd});
         } catch (const std::out_of_range &ex) {
             // if command not found empty response should be returned
-            return "";
+            return cmd::EMPTY_RESULT;
         }
     }
 
@@ -50,12 +49,7 @@ public:
         return end != std::string::npos ? cmd.substr(0, end) : cmd;
     }
 
-    bool isKillPacketReceived() {
-        return target.state.isKilled;
-    }
-
 private:
-    Target target;
     std::map<std::string, std::shared_ptr<cmd::Command>> commandTable;
     std::vector<char> oneLetterNames;
 };
