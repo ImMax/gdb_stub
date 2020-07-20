@@ -38,7 +38,7 @@ public:
     Result exec(Target &target, const std::string &args) override {
         target.cpu.start();
         target.status = TargetStatus::RUNNING;
-        return EMPTY_RESULT;
+        return CONTINUE_RESULT;
     }
 };
 
@@ -83,6 +83,7 @@ public:
     Result exec(Target &target, const std::string &args) override {
         const auto bpCmd = BreakpointCmd(args);
         target.cpu.setBreakpoint(bpCmd.address);
+        target.status = TargetStatus::BREAK;
         return {"OK"};
     }
 };
@@ -127,7 +128,16 @@ public:
     std::string getName() const override { return cmd::INTERRUPT_NAME; }
     Result exec(Target &target, const std::string &args) override {
         target.cpu.stop();
+        target.status = TargetStatus::STOPPED;
         return {"S02"};
+    }
+};
+
+class Trap : public Command {
+public:
+    std::string getName() const override { return cmd::TRAP_NAME; }
+    Result exec(Target &target, const std::string &args) override {
+        return {"S05"};
     }
 };
 

@@ -9,7 +9,7 @@ namespace gdb_stub {
 namespace cmd {
 
 constexpr auto INTERRUPT_NAME = "int";
-constexpr auto INTERRUPT_BYTE = 0x03;
+constexpr auto TRAP_NAME = "trap";
 
 constexpr auto E01 = "E01";
 

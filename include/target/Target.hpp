@@ -11,6 +11,7 @@ namespace gdb_stub {
 enum class TargetStatus {
     RUNNING,
     STOPPED,
+    BREAK,
     KILLED,
 };
 
@@ -20,7 +21,7 @@ public:
 
     Target(const Config &config, const MemoryIf &memory, const CPUIf &cpu) :
             config(config), memory(memory), cpu(cpu) {
-        status = TargetStatus::RUNNING;
+        status = TargetStatus::STOPPED;
     }
 
     Config config;

@@ -30,6 +30,7 @@ std::vector<cmd::Command_ptr> DEFAULT_COMMANDS_LIST {
 
         std::make_shared<cmd::KillProcess>(),
         std::make_shared<cmd::Interrupt>(),
+        std::make_shared<cmd::Trap>(),
 };
 
 }
